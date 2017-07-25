@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -9,9 +10,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/concourse/faa/postfacto"
-	"github.com/concourse/faa/slackcommand"
+	"github.com/mariash/faa/postfacto"
+	"github.com/mariash/faa/slackcommand"
 )
+
+type PostfactoConfig map[SlackChannelName]PostfactoData
+
+type SlackChannelName string
+type PostfactoData struct {
+	Name        string `json:"name"`
+	RetroID     int    `json:"retro_id"`
+	TechRetroID int    `json:"tech_retro_id"`
+}
+
+const PostfactoAPIURL = "https://retro-api.cfapps.io"
 
 func main() {
 	var (
@@ -28,31 +40,21 @@ func main() {
 		panic(errors.New("Must provide SLACK_VERIFICATION_TOKEN"))
 	}
 
-	retroID, ok := os.LookupEnv("POSTFACTO_RETRO_ID")
+	postfactoConfigJSON, ok := os.LookupEnv("POSTFACTO_CONFIG")
 	if !ok {
-		panic(errors.New("Must provide POSTFACTO_RETRO_ID"))
+		panic(errors.New("Must provide POSTFACTO_CONFIG"))
 	}
 
-	techRetroID, ok := os.LookupEnv("POSTFACTO_TECH_RETRO_ID")
-	if !ok {
-		panic(errors.New("Must provide POSTFACTO_TECH_RETRO_ID"))
-	}
-
-	c := &postfacto.RetroClient{
-		Host: "https://retro-api.cfapps.io",
-		ID:   retroID,
-	}
-
-	t := &postfacto.RetroClient{
-		Host: "https://retro-api.cfapps.io",
-		ID:   techRetroID,
+	var postfactoConfig PostfactoConfig
+	err := json.Unmarshal([]byte(postfactoConfigJSON), &postfactoConfig)
+	if err != nil {
+		panic(errors.New("Failed to parse POSTFACTO_CONFIG: " + err.Error()))
 	}
 
 	server := slackcommand.Server{
 		VerificationToken: vToken,
 		Delegate: &PostfactoSlackDelegate{
-			RetroClient:     c,
-			TechRetroClient: t,
+			Config: postfactoConfig,
 		},
 	}
 
@@ -62,8 +64,7 @@ func main() {
 }
 
 type PostfactoSlackDelegate struct {
-	RetroClient     *postfacto.RetroClient
-	TechRetroClient *postfacto.RetroClient
+	Config PostfactoConfig
 }
 
 type Command string
@@ -85,30 +86,44 @@ func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) 
 	description := parts[1]
 
 	var (
-		client   *postfacto.RetroClient
 		category postfacto.Category
+		retroID  int
 	)
+
+	postfactoData, ok := d.Config[SlackChannelName(r.ChannelID)]
+	if !ok {
+		return "", fmt.Errorf("channel '%s' with id '%s' is not configured", r.ChannelName, r.ChannelID)
+	}
 
 	switch Command(c) {
 	case CommandHappy:
 		category = postfacto.CategoryHappy
-		client = d.RetroClient
+		retroID = postfactoData.RetroID
 	case CommandMeh:
 		category = postfacto.CategoryMeh
-		client = d.RetroClient
+		retroID = postfactoData.RetroID
 	case CommandSad:
 		category = postfacto.CategorySad
-		client = d.RetroClient
+		retroID = postfactoData.RetroID
 	case CommandTech:
 		category = postfacto.CategoryHappy
-		client = d.TechRetroClient
+		retroID = postfactoData.TechRetroID
 	default:
 		return "", errors.New("unknown command: must provide one of 'happy', 'meh', 'sad', or 'tech'")
+	}
+
+	if retroID == 0 {
+		return "", fmt.Errorf("invalid retro id '%d'", retroID)
 	}
 
 	retroItem := postfacto.RetroItem{
 		Category:    category,
 		Description: fmt.Sprintf("%s [%s]", description, r.UserName),
+	}
+
+	client := &postfacto.RetroClient{
+		Host: PostfactoAPIURL,
+		ID:   string(retroID),
 	}
 
 	err := client.Add(retroItem)

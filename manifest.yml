@@ -1,11 +1,11 @@
 applications:
-- name: faa
+- name: faa-cloudfoundry
   instances: 1
   memory: 128M
   buildpack: go_buildpack
   routes:
-  - route: faa.cfapps.io
+  - route: faa-cloudfoundry.cfapps.io
   command: faa
   env:
-    GOPACKAGENAME: github.com/concourse/faa
+    GOPACKAGENAME: github.com/mariash/faa
   stack: cflinuxfs2
