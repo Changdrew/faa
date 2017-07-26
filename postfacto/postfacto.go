@@ -9,8 +9,9 @@ import (
 )
 
 type RetroClient struct {
-	Host string
-	ID   string
+	Host     string
+	ID       int
+	Password string
 }
 
 type Category string
@@ -26,21 +27,77 @@ type RetroItem struct {
 	Category    Category `json:"category"`
 }
 
+type TokenRequest struct {
+	Retro RetroConfig `json:"retro"`
+}
+
+type RetroConfig struct {
+	Password string `json:"password"`
+}
+
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
 func (c *RetroClient) Add(i RetroItem) error {
+	retroURL := fmt.Sprintf("%s/retros/%d", c.Host, c.ID)
+	var authorizationToken string
+
+	if c.Password != "" {
+		tokenRequest := TokenRequest{
+			Retro: RetroConfig{
+				Password: c.Password,
+			},
+		}
+		tokenRequestJSON, err := json.Marshal(tokenRequest)
+		if err != nil {
+			return err
+		}
+
+		b := bytes.NewReader(tokenRequestJSON)
+		req, err := http.NewRequest("PUT", retroURL+"/login", b)
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Accept", "application/json")
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed sending token request: " + err.Error())
+		}
+		defer res.Body.Close()
+
+		var tokenResponse TokenResponse
+		err = json.NewDecoder(res.Body).Decode(&tokenResponse)
+		if err != nil {
+			return fmt.Errorf("failed to decode token response: " + err.Error())
+		}
+		authorizationToken = tokenResponse.Token
+	}
+
 	b := new(bytes.Buffer)
-	json.NewEncoder(b).Encode(i)
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/retros/%s/items", c.Host, c.ID), b)
+	err := json.NewEncoder(b).Encode(i)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", retroURL+"/items", b)
 	if err != nil {
 		return err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
+	if authorizationToken != "" {
+		req.Header.Add("Authorization", "Bearer "+authorizationToken)
+	}
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusCreated {
 		b, _ := httputil.DumpResponse(res, true)
