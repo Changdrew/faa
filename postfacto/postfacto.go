@@ -10,7 +10,7 @@ import (
 
 type RetroClient struct {
 	Host     string
-	ID       int
+	Name     string
 	Password string
 }
 
@@ -40,7 +40,7 @@ type TokenResponse struct {
 }
 
 func (c *RetroClient) Add(i RetroItem) error {
-	retroURL := fmt.Sprintf("%s/retros/%d", c.Host, c.ID)
+	retroURL := fmt.Sprintf("%s/retros/%s", c.Host, c.Name)
 	var authorizationToken string
 
 	if c.Password != "" {

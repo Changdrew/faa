@@ -18,9 +18,11 @@ type PostfactoConfig map[SlackChannelName]PostfactoData
 
 type SlackChannelName string
 type PostfactoData struct {
-	Name     string `json:"name"`
-	RetroID  int    `json:"retro_id"`
-	Password string `json:"password"`
+	Name          string `json:"name"`
+	RetroName     string `json:"retro_name"`
+	Password      string `json:"password"`
+	TechRetroName string `json:"tech_retro_name"`
+	TechPassword  string `json:"tech_password"`
 }
 
 const PostfactoAPIURL = "https://retro-api.cfapps.io"
@@ -73,39 +75,52 @@ const (
 	CommandHappy Command = "happy"
 	CommandMeh   Command = "meh"
 	CommandSad   Command = "sad"
+	CommandTech  Command = "tech"
 )
 
 func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) {
 	parts := strings.SplitN(r.Text, " ", 2)
 	if len(parts) < 2 {
-		return "", fmt.Errorf("must be in the form of '%s [happy/meh/sad] [message]'", r.Command)
+		return "", fmt.Errorf("must be in the form of '%s [happy/meh/sad/tech] [message]'", r.Command)
 	}
 
 	c := parts[0]
 	description := parts[1]
-
-	var (
-		category postfacto.Category
-	)
 
 	postfactoData, ok := d.Config[SlackChannelName(r.ChannelID)]
 	if !ok {
 		return "", fmt.Errorf("channel '%s' with ID '%s' is not configured", r.ChannelName, r.ChannelID)
 	}
 
-	if postfactoData.RetroID == 0 {
-		return "", fmt.Errorf("retro ID is not set")
+	if postfactoData.RetroName == "" {
+		return "", fmt.Errorf("retro Name is not set")
 	}
+
+	var (
+		category      postfacto.Category
+		retroName     string
+		retroPassword string
+	)
 
 	switch Command(c) {
 	case CommandHappy:
 		category = postfacto.CategoryHappy
+		retroName = postfactoData.RetroName
+		retroPassword = postfactoData.Password
 	case CommandMeh:
 		category = postfacto.CategoryMeh
+		retroName = postfactoData.RetroName
+		retroPassword = postfactoData.Password
 	case CommandSad:
 		category = postfacto.CategorySad
+		retroName = postfactoData.RetroName
+		retroPassword = postfactoData.Password
+	case CommandTech:
+		category = postfacto.CategoryMeh
+		retroName = postfactoData.TechRetroName
+		retroPassword = postfactoData.TechPassword
 	default:
-		return "", errors.New("unknown command: must provide one of 'happy', 'meh', or 'sad'")
+		return "", errors.New("unknown command: must provide one of 'happy', 'meh', 'sad' or 'tech'")
 	}
 
 	retroItem := postfacto.RetroItem{
@@ -115,8 +130,8 @@ func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) 
 
 	client := &postfacto.RetroClient{
 		Host:     PostfactoAPIURL,
-		ID:       postfactoData.RetroID,
-		Password: postfactoData.Password,
+		Name:     retroName,
+		Password: retroPassword,
 	}
 
 	err := client.Add(retroItem)
