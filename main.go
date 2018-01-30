@@ -19,6 +19,7 @@ type PostfactoConfig map[SlackChannelName]PostfactoData
 type SlackChannelName string
 type PostfactoData struct {
 	Name          string `json:"name"`
+	RetroHost     string `json:"retros_host"`
 	RetroName     string `json:"retro_name"`
 	Password      string `json:"password"`
 	TechRetroName string `json:"tech_retro_name"`
@@ -99,8 +100,15 @@ func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) 
 	var (
 		category      postfacto.Category
 		retroName     string
+		retroHost     string
 		retroPassword string
 	)
+
+	if postfactoData.RetroHost == "" {
+		retroHost = PostfactoAPIURL
+	} else {
+		retroHost = postfactoData.RetroHost
+	}
 
 	switch Command(c) {
 	case CommandHappy:
@@ -129,7 +137,7 @@ func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) 
 	}
 
 	client := &postfacto.RetroClient{
-		Host:     PostfactoAPIURL,
+		Host:     retroHost,
 		Name:     retroName,
 		Password: retroPassword,
 	}
