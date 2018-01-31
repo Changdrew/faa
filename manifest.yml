@@ -7,5 +7,5 @@ applications:
   - route: faa-cloudfoundry.cfapps.io
   command: faa
   env:
-    GOPACKAGENAME: github.com/mariash/faa
+    GOPACKAGENAME: github.com/vitreuz/faa
   stack: cflinuxfs2
