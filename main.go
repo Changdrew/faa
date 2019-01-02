@@ -26,7 +26,7 @@ type PostfactoData struct {
 	TechPassword  string `json:"tech_password"`
 }
 
-const PostfactoAPIURL = "https://retro-api.cfapps.io"
+const PostfactoAPIURL = "https://retros-iad-api.cfapps.io/"
 
 func main() {
 	var (

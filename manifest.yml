@@ -4,8 +4,10 @@ applications:
   memory: 128M
   buildpack: go_buildpack
   routes:
-  - route: faa-cloudfoundry.cfapps.io
+  - route: relint-retro.luna.cf-app.com
   command: faa
   env:
     GOPACKAGENAME: github.com/Changdrew/faa
+    SLACK_VERIFICATION_TOKEN: ((slack_token))
+    POSTFACTO_CONFIG: ((postfacto_conf))
   stack: cflinuxfs2
