@@ -23,7 +23,7 @@ FAA runs as an app on Cloud Foundry. To successfully push, you must provide the 
 ```json
 {
   "<SLACK_CHANNEL_ID>": {
-    "name: "<SLACK_CHANNEL_NAME>",
+    "name": "<SLACK_CHANNEL_NAME>",
     "retro_name": "<POSTFACTO_RETRO_NAME>",
     "password": "<POSTFACTO_RETRO_PASSWORD>",
     "tech_retro_name": "<POSTFACTO_TECH_RETRO_NAME>",
