@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vitreuz/faa/postfacto"
-	"github.com/vitreuz/faa/slackcommand"
+	"github.com/Changdrew/faa/postfacto"
+	"github.com/Changdrew/faa/slackcommand"
 )
 
 type PostfactoConfig map[SlackChannelName]PostfactoData
