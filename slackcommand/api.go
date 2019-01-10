@@ -36,7 +36,7 @@ type Response struct {
 
 func NewOKResponse(text string) Response {
 	return Response{
-		Type: "in_channel",
+		Type: "ephemeral",
 		Text: text,
 	}
 }

@@ -147,5 +147,5 @@ func (d *PostfactoSlackDelegate) Handle(r slackcommand.Command) (string, error) 
 		return "", err
 	}
 
-	return "retro item added", nil
+	return fmt.Sprintf("retro item added: [%s] %s", category, description), nil
 }
